@@ -1,23 +1,17 @@
+import os
 import pygame
 
 from entities.board_square import *
-import config
 
-from pygame.locals import (
-    MOUSEBUTTONUP,   
-    K_ESCAPE,
-    KEYDOWN,
-    QUIT,
-)
+from functions.functions import *
+from vars import *
 
 pygame.init()
 
 
-screen = pygame.display.set_mode((config.screen_width, config.screen_width))
-
 #Making the board
+#TODO: PUT NUMBER ON SQUARE
 board = []
-width = config.screen_width / 8
 is_white = False
 
 y_start = 0
@@ -26,36 +20,41 @@ for y in range(8):
     rank = []
     is_white = not is_white
     for x in range(8):
-        bs = BoardSquare(x_start, y_start, width, is_white)
+        bs = BoardSquare(x_start, y_start, WIDTH, is_white)
         rank.append(bs)
         is_white = not is_white
-        x_start += width
+        x_start += WIDTH
     board.append(rank)
-    y_start += width
-
-print(len(board))
-print(len(board[7]))
-#Rendering the board
-for rank in board:
-    for square in rank:
-        surf = pygame.Surface((square.width_height, square.width_height))
-
-        if square.is_white:
-            surf.fill((236,235,214))
-        else:
-            
-            surf.fill((123,147, 92))
-        rect = surf.get_rect()
-        screen.blit(surf, (square.x_start, square.y_start))
-        pygame.display.flip()
+    y_start += WIDTH
 
 
-#Main loop
+#Main vars
 running = True
+FPS = 60
+clock = pygame.time.Clock()
+#Making pieces
+piece = Piece(True)
+piece.img = WHITE_KING
+board[0][1].piece = piece
+
+piece2 = Piece(False)
+piece2.img = BLACK_BISHOP 
+board[0][2].piece = piece2
+#Main loop
 while running:
+    clock.tick(FPS)
+  #  render_pieces(board, WIN)
+    redraw_window(WIN, board)
+
+    if not(vars.selected_piece is None): 
+        x,y = pygame.mouse.get_pos()
+        render_selected_piece(x,y, WIN)
     for event in pygame.event.get():
-        if event.type == KEYDOWN:
-            if event.key == K_ESCAPE:
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
                 running = False
-        if event.type == MOUSEBUTTONUP:
-            print(pygame.mouse.get_pos())
+        if event.type == pygame.MOUSEBUTTONUP:
+            x,y = pygame.mouse.get_pos()
+            select_square(x,y, board, WIDTH, WIN)
+            
+    pygame.display.update()
