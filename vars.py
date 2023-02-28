@@ -20,6 +20,15 @@ WHITE_KNIGHT = pygame.image.load(os.path.join("assets", "white_knight.png"))
 
 BG = pygame.transform.scale(pygame.image.load(os.path.join("assets", "board.png")), (SCREEN_WIDTH, SCREEN_WIDTH))
 WIN = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_WIDTH))
-
 WIDTH =  SCREEN_WIDTH/8
+
+number_to_position_map = {}
+for i in range(64):
+    number_to_position_map[i] = (i//8, i % 8) #(y, x) for list indexing
+
+#State vars
 selected_piece = None
+possible_moves = []
+current_move = None
+board = []
+white_moves = True
