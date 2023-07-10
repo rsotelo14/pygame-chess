@@ -28,7 +28,7 @@ for i in range(64):
 
 #State vars
 selected_piece = None
-possible_moves = []
+piece_possible_moves = []
 current_move = None
 board = []
-white_moves = True
+white_moves = False

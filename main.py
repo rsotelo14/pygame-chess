@@ -28,8 +28,8 @@ while running:
                 running = False
         if event.type == pygame.MOUSEBUTTONUP:
             x,y = pygame.mouse.get_pos()
-            select_square(x,y, vars.board, WIDTH, WIN)
-    if vars.possible_moves != []:
+            select_square(x,y, vars.board, WIDTH)
+    if vars.piece_possible_moves != []:
         highlight_possible_squares(vars.board, WIN)
     if not(vars.selected_piece is None): 
         x,y = pygame.mouse.get_pos()
