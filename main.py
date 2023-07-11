@@ -20,7 +20,12 @@ clock = pygame.time.Clock()
 #Main loop
 while running:
     clock.tick(FPS)
-    redraw_window(WIN, vars.board)
+    WIN.blit(vars.BG, (0,0))
+    if not(vars.last_move is None): 
+        highlight_last_move(WIN)
+    if vars.check:
+        highlight_checked_square(WIN)
+    render_pieces(board, WIN)
 
     for event in pygame.event.get():
         if event.type == pygame.KEYDOWN:
