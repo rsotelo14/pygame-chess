@@ -29,11 +29,17 @@ number_to_position_map = {}
 for i in range(64):
     number_to_position_map[i] = (i//8, i % 8) #(y, x) for list indexing
 
+#Main vars
+FPS = 60
+clock = pygame.time.Clock()
+
+
 #State vars
-running = True
+playing = False
 selected_piece = None
 piece_possible_moves = []
-all_possible_moves = []
+all_possible_moves_to_play = []
+all_possible_moves_just_played = []
 current_move = None
 board = []
 white_moves = True

@@ -10,8 +10,70 @@ from entities.en_passant import EnPassant
 
 import vars
 
+def pvp():
+    vars.playing = True
+    WIN = vars.WIN
+    board = vars.board
+    WIDTH = vars.WIDTH
+    while vars.playing:
+        vars.clock.tick(vars.FPS)
+        WIN.blit(vars.BG, (0,0))
+        if not(vars.last_move is None): 
+            highlight_last_move(WIN)
+        if vars.check:
+            highlight_checked_square(WIN)
+        render_pieces(board, WIN)
 
-#TODO: CHECK FOR CHECKMATE AND MAKE A MENU
+        for event in pygame.event.get():
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    vars.playing = False
+                    running = False
+            if event.type == pygame.MOUSEBUTTONUP:
+                x,y = pygame.mouse.get_pos()
+                select_square(x,y, vars.board, WIDTH)
+        if vars.piece_possible_moves != []:
+            highlight_possible_squares(vars.board, WIN)
+        if not(vars.selected_piece is None): 
+            x,y = pygame.mouse.get_pos()
+            render_selected_piece(x,y, WIN)
+                
+        pygame.display.update()
+
+
+
+def main_menu():
+    title_font = pygame.font.SysFont('trebuchetms', 40,True)
+    text_font = pygame.font.SysFont('trebuchetms', 30,True)
+    main_menu_text = title_font.render("PYCHESS",True, (0,0,0))
+    main_menu_rect = main_menu_text.get_rect(center= (400,300))
+    pvp_text = text_font.render("P1 VS P2 (Press A)", True, (0,0,0))
+    pvp_rect = pvp_text.get_rect(center=(400,375))
+    pvcpu_text = text_font.render("P1 VS PC (Press B)", True, (0,0,0))
+    pvcpu_rect = pvcpu_text.get_rect(center=(400,425))
+
+    main_menu = True
+    WIN = vars.WIN
+
+    menu_rect = pygame.Rect(250,250,300,300)
+
+    while main_menu:
+        vars.clock.tick(vars.FPS)
+        WIN.blit(vars.BG, (0,0))
+        pygame.draw.rect(WIN, (234, 235, 209),menu_rect)
+        pygame.draw.rect(WIN, (0,50,0),menu_rect, 10)
+        WIN.blit(main_menu_text, main_menu_rect)
+        WIN.blit(pvp_text, pvp_rect)
+        WIN.blit(pvcpu_text, pvcpu_rect)
+        for event in pygame.event.get():
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_a:
+                   return 1
+                if event.key == pygame.K_b:
+                   return 2
+        pygame.display.update()
+
+
 
 def make_board():
     is_white = False
@@ -98,7 +160,7 @@ def initial_position():
     for i in range(8):
         y,x = vars.number_to_position_map[48 + i]
         vars.board[y][x].piece = piece
-    vars.all_possible_moves = calculate_all_moves()
+    vars.all_possible_moves_to_play = calculate_all_moves_to_play()
 
 def render_pieces(board, window):
     for rank in board:
@@ -156,16 +218,16 @@ def check_move_for_promotion(move):
 def check_for_checkmate():
     if not vars.check:
         return
-    for move in vars.all_possible_moves:
+    for move in vars.all_possible_moves_to_play:
         if move.piece.is_white != vars.white_moves:
             continue
         if move.start_square_num != move.target_square_num:
             return
-    vars.running = False
+    vars.playing = False
 
 def look_for_checks():
     checked = False
-    for move in vars.all_possible_moves:
+    for move in vars.all_possible_moves_just_played:
         y,x = vars.number_to_position_map[move.target_square_num]
         try:
             if vars.board[y][x].piece.value == 10 and vars.board[y][x].piece.is_white == (not move.piece.is_white):
@@ -248,13 +310,10 @@ def remove_ilegal_moves(moves):
        y_start, x_start = vars.number_to_position_map[move.start_square_num]
        y_target, x_target = vars.number_to_position_map[move.target_square_num]
        #Save the piece in target square
-       target_square_piece = vars.board[y_target][x_target].piece
-       #Make move
-       #make_move(move)
-       vars.board[y_start][x_start].piece = None
-       vars.board[y_target][x_target].piece = move.piece
+       target_square_piece = make_move(move)
+       vars.white_moves = not vars.white_moves
        #Calculate moves
-       all_moves = calculate_all_moves()
+       all_moves = calculate_all_moves_to_play()
        for new_move in all_moves:
            #If it's one of my pieces I dont care, and If it's in the same square I don't care
            if new_move.piece.is_white != move.piece.is_white and new_move.start_square_num != new_move.target_square_num:
@@ -267,9 +326,8 @@ def remove_ilegal_moves(moves):
                     if vars.board[y][x].piece == vars.white_king_piece:
                         remove_moves.append(move)
        #Unmake move
-       #unmake_move(move)
-       vars.board[y_start][x_start].piece = move.piece
-       vars.board[y_target][x_target].piece = target_square_piece
+       unmake_move(move, target_square_piece)
+       vars.white_moves = not vars.white_moves
     for move_to_remove in remove_moves:
         try:
             moves.remove(move_to_remove)
@@ -287,7 +345,7 @@ def make_move(move):
      target_square_piece = vars.board[y_target][x_target].piece
      vars.board[y_start][x_start].piece = None
      vars.board[y_target][x_target].piece = move.piece
-     return
+     return target_square_piece
 
 def unmake_move(move, target_square_piece):
      if type(move) == Castle:
@@ -301,7 +359,36 @@ def unmake_move(move, target_square_piece):
 
 def move_made():
     vars.white_moves = not vars.white_moves
-    vars.all_possible_moves = remove_ilegal_moves(calculate_all_moves())
+    vars.all_possible_moves_to_play = remove_ilegal_moves(calculate_all_moves_to_play())
+    vars.all_possible_moves_just_played = remove_ilegal_moves(calculate_all_moves_just_played())
+
+def un_castle(move):
+    if move.piece.is_white:
+        if move.is_short_castle:
+            rook = vars.board[7][5].piece
+            vars.board[7][7].piece = rook
+            vars.board[7][5].piece = None
+        else:
+            rook = vars.board[7][3].piece
+            vars.board[7][0].piece = rook
+            vars.board[7][3].piece = None
+    else:
+        if move.is_short_castle:
+            rook = vars.board[0][5].piece
+            vars.board[0][7].piece = rook
+            vars.board[0][5].piece = None
+        else:
+            rook = vars.board[0][3].piece
+            vars.board[0][0].piece = rook
+            vars.board[0][3].piece = None
+def un_en_passant(move):
+    print("UNDO EN PASSANT;")
+    if move.piece.is_white:
+        y_target, x_target = vars.number_to_position_map[move.target_square_num +8]
+        vars.board[y_target][x_target].piece = Piece(False, 1)
+    else:
+        y_target, x_target = vars.number_to_position_map[move.target_square_num -8]
+        vars.board[y_target][x_target].piece = Piece(True, 1)
 
 def calculate_edge_distance(number):
     left = number % 8
@@ -314,11 +401,19 @@ def calculate_edge_distance(number):
         "up": up,
         "down": down,
     }
-def calculate_all_moves():
+def calculate_all_moves_to_play():
     moves = []
     for rank in vars.board:
         for square in rank:
-            if square.piece != None:
+            if square.piece != None and square.piece.is_white == vars.white_moves:
+                distances = calculate_edge_distance(square.number)
+                moves = moves + calculate_piece_moves(square.number, distances, square.piece)
+    return moves
+def calculate_all_moves_just_played():
+    moves = []
+    for rank in vars.board:
+        for square in rank:
+            if square.piece != None and square.piece.is_white == (not vars.white_moves):
                 distances = calculate_edge_distance(square.number)
                 moves = moves + calculate_piece_moves(square.number, distances, square.piece)
     return moves
@@ -360,7 +455,7 @@ def check_castling(number, piece):
                     if vars.board[y][x].piece != None:
                         can_long_castle = False
                     if i != 3:
-                        for move in vars.all_possible_moves:
+                        for move in vars.all_possible_moves_to_play:
                             if move.piece != None and move.piece.is_white == (not piece.is_white) and move.target_square_num == number -i:
                                 can_long_castle = False
                 except: 
@@ -374,7 +469,7 @@ def check_castling(number, piece):
                     y, x = vars.number_to_position_map[number +i]
                     if vars.board[y][x].piece != None:
                         can_short_castle = False
-                    for move in vars.all_possible_moves:
+                    for move in vars.all_possible_moves_to_play:
                         if move.piece != None and move.piece.is_white == (not piece.is_white) and move.target_square_num == number +i:
                             can_short_castle = False
                 except:
@@ -392,7 +487,7 @@ def check_castling(number, piece):
                     if vars.board[y][x].piece != None:
                         can_long_castle = False
                     if i != 3:
-                        for move in vars.all_possible_moves:
+                        for move in vars.all_possible_moves_to_play:
                             if move.piece != None and move.piece.is_white == (not piece.is_white) and move.target_square_num == number -i:
                                 can_long_castle = False
                 except:
@@ -405,7 +500,7 @@ def check_castling(number, piece):
                 y, x = vars.number_to_position_map[number +i]
                 if vars.board[y][x].piece != None:
                     can_short_castle = False
-                for move in vars.all_possible_moves:
+                for move in vars.all_possible_moves_to_play:
                         if move.piece != None and move.piece.is_white == (not piece.is_white) and move.target_square_num == number +i:
                             can_short_castle = False
             if can_short_castle:
