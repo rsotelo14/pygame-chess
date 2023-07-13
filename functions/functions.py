@@ -10,7 +10,7 @@ from entities.en_passant import EnPassant
 
 import vars
 
-#TODO: CHECKS and HIGHLIGHT CHECK, CANT CASTLE THROUGH CHECK
+
 #TODO: CHECK FOR CHECKMATE AND MAKE A MENU
 
 def make_board():
@@ -98,7 +98,7 @@ def initial_position():
     for i in range(8):
         y,x = vars.number_to_position_map[48 + i]
         vars.board[y][x].piece = piece
-    move_made()
+    vars.all_possible_moves = calculate_all_moves()
 
 def render_pieces(board, window):
     for rank in board:
@@ -122,8 +122,7 @@ def select_square(x,y, board, width):
     #Selecting a piece
     if selected_square.piece != None and vars.selected_piece == None and selected_square.piece.is_white == vars.white_moves:
         vars.selected_piece = board[y_index][x_index].piece
-        pseudo_legal_moves = calculate_piece_moves(selected_square.number, distances, vars.selected_piece)
-        vars.piece_possible_moves = remove_ilegal_moves(pseudo_legal_moves)
+        vars.piece_possible_moves = remove_ilegal_moves(calculate_piece_moves(selected_square.number, distances, vars.selected_piece))
         board[y_index][x_index].piece = None
     #Dropping a piece
     elif vars.selected_piece != None:
@@ -142,6 +141,7 @@ def select_square(x,y, board, width):
 
                     move_made()
                     look_for_checks()
+                    check_for_checkmate()
                     vars.last_move = move
                     
                 return
@@ -152,6 +152,16 @@ def check_move_for_promotion(move):
     y,x = vars.number_to_position_map[move.target_square_num] 
     if (move.piece.is_white and y == 0) or (not move.piece.is_white and y == 7):
         vars.board[y][x].piece = Piece(move.piece.is_white, 9)
+
+def check_for_checkmate():
+    if not vars.check:
+        return
+    for move in vars.all_possible_moves:
+        if move.piece.is_white != vars.white_moves:
+            continue
+        if move.start_square_num != move.target_square_num:
+            return
+    vars.running = False
 
 def look_for_checks():
     checked = False
@@ -229,18 +239,20 @@ def remove_ilegal_moves(moves):
     temp_board = vars.board
     remove_moves=  []
     #For each of the possible moves
-    y_start, x_start = vars.number_to_position_map[moves[0].start_square_num]
     for move in moves:
        #If its to the same square it doesnt matter
        if move.start_square_num == move.target_square_num:
            continue
        #Get the squares
+       
+       y_start, x_start = vars.number_to_position_map[move.start_square_num]
        y_target, x_target = vars.number_to_position_map[move.target_square_num]
        #Save the piece in target square
-       target_square_piece = temp_board[y_target][x_target].piece
+       target_square_piece = vars.board[y_target][x_target].piece
        #Make move
-       temp_board[y_start][x_start].piece = None
-       temp_board[y_target][x_target].piece = move.piece
+       #make_move(move)
+       vars.board[y_start][x_start].piece = None
+       vars.board[y_target][x_target].piece = move.piece
        #Calculate moves
        all_moves = calculate_all_moves()
        for new_move in all_moves:
@@ -249,14 +261,15 @@ def remove_ilegal_moves(moves):
                 #Get target square
                 y, x = vars.number_to_position_map[new_move.target_square_num]
                 if not move.piece.is_white:
-                    if temp_board[y][x].piece == vars.black_king_piece:
+                    if vars.board[y][x].piece == vars.black_king_piece:
                         remove_moves.append(move)
                 else:
-                    if temp_board[y][x].piece == vars.white_king_piece:
+                    if vars.board[y][x].piece == vars.white_king_piece:
                         remove_moves.append(move)
-    #
-       temp_board[y_start][x_start].piece = move.piece
-       temp_board[y_target][x_target].piece = target_square_piece
+       #Unmake move
+       #unmake_move(move)
+       vars.board[y_start][x_start].piece = move.piece
+       vars.board[y_target][x_target].piece = target_square_piece
     for move_to_remove in remove_moves:
         try:
             moves.remove(move_to_remove)
@@ -264,11 +277,31 @@ def remove_ilegal_moves(moves):
             pass
     return moves
 
+def make_move(move):
+     if type(move) == Castle:
+        castle(move)
+     if type(move) == EnPassant:
+        en_passant(move)
+     y_start, x_start = vars.number_to_position_map[move.start_square_num]
+     y_target, x_target = vars.number_to_position_map[move.target_square_num]
+     target_square_piece = vars.board[y_target][x_target].piece
+     vars.board[y_start][x_start].piece = None
+     vars.board[y_target][x_target].piece = move.piece
+     return
 
+def unmake_move(move, target_square_piece):
+     if type(move) == Castle:
+        un_castle(move)
+     if type(move) == EnPassant:
+        un_en_passant(move)
+     y_start, x_start = vars.number_to_position_map[move.start_square_num]
+     y_target, x_target = vars.number_to_position_map[move.target_square_num]  
+     vars.board[y_start][x_start].piece = move.piece
+     vars.board[y_target][x_target].piece = target_square_piece
 
 def move_made():
     vars.white_moves = not vars.white_moves
-    vars.all_possible_moves = calculate_all_moves()
+    vars.all_possible_moves = remove_ilegal_moves(calculate_all_moves())
 
 def calculate_edge_distance(number):
     left = number % 8
@@ -314,6 +347,8 @@ def calculate_piece_moves(number, distances, piece):
 
 def check_castling(number, piece):
     moves = []
+    if vars.check:
+        return moves
     if piece.is_white:
         if vars.white_king_moved:
             return moves
@@ -324,6 +359,10 @@ def check_castling(number, piece):
                     y, x = vars.number_to_position_map[number -i]
                     if vars.board[y][x].piece != None:
                         can_long_castle = False
+                    if i != 3:
+                        for move in vars.all_possible_moves:
+                            if move.piece != None and move.piece.is_white == (not piece.is_white) and move.target_square_num == number -i:
+                                can_long_castle = False
                 except: 
                     pass
             if can_long_castle:
@@ -335,6 +374,9 @@ def check_castling(number, piece):
                     y, x = vars.number_to_position_map[number +i]
                     if vars.board[y][x].piece != None:
                         can_short_castle = False
+                    for move in vars.all_possible_moves:
+                        if move.piece != None and move.piece.is_white == (not piece.is_white) and move.target_square_num == number +i:
+                            can_short_castle = False
                 except:
                     pass
             if can_short_castle:
@@ -349,6 +391,10 @@ def check_castling(number, piece):
                     y, x = vars.number_to_position_map[number -i]
                     if vars.board[y][x].piece != None:
                         can_long_castle = False
+                    if i != 3:
+                        for move in vars.all_possible_moves:
+                            if move.piece != None and move.piece.is_white == (not piece.is_white) and move.target_square_num == number -i:
+                                can_long_castle = False
                 except:
                     pass
             if can_long_castle:
@@ -359,6 +405,9 @@ def check_castling(number, piece):
                 y, x = vars.number_to_position_map[number +i]
                 if vars.board[y][x].piece != None:
                     can_short_castle = False
+                for move in vars.all_possible_moves:
+                        if move.piece != None and move.piece.is_white == (not piece.is_white) and move.target_square_num == number +i:
+                            can_short_castle = False
             if can_short_castle:
                 moves.append(Castle(number, number +2, piece, True))
     return moves
@@ -497,7 +546,6 @@ def calculate_knight_moves(number, distances, piece):
     return moves
 
 def calculate_pawn_moves(number,distances, piece):
-    #TODO: PROMOTION
     moves = []
     if piece.is_white:
         move = Move(number, number -8, piece)
@@ -524,10 +572,11 @@ def calculate_pawn_moves(number,distances, piece):
                 moves.append(move)
         #En passant
         last_move= vars.last_move
-        if y == 3 and not last_move.piece.is_white and last_move.piece.value == 1 and last_move.start_square_num == last_move.target_square_num -16:
-            y_last_move, x_last_move = vars.number_to_position_map[vars.last_move.target_square_num]
-            if x_last_move == x +1 or x_last_move == x -1:
-                moves.append(EnPassant(number, last_move.target_square_num - 8, piece ))
+        if last_move != None:
+            if y == 3 and not last_move.piece.is_white and last_move.piece.value == 1 and last_move.start_square_num == last_move.target_square_num -16:
+                y_last_move, x_last_move = vars.number_to_position_map[vars.last_move.target_square_num]
+                if x_last_move == x +1 or x_last_move == x -1:
+                    moves.append(EnPassant(number, last_move.target_square_num - 8, piece ))
 
             
     else:

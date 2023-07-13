@@ -30,11 +30,13 @@ for i in range(64):
     number_to_position_map[i] = (i//8, i % 8) #(y, x) for list indexing
 
 #State vars
+running = True
 selected_piece = None
 piece_possible_moves = []
+all_possible_moves = []
 current_move = None
 board = []
-white_moves = False
+white_moves = True
 white_king_moved = False 
 white_left_rook_moved = False 
 white_right_rook_moved = False 

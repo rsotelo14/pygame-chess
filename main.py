@@ -18,7 +18,7 @@ running = True
 FPS = 60
 clock = pygame.time.Clock()
 #Main loop
-while running:
+while vars.running:
     clock.tick(FPS)
     WIN.blit(vars.BG, (0,0))
     if not(vars.last_move is None): 
@@ -30,7 +30,7 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
-                running = False
+               vars.running = False
         if event.type == pygame.MOUSEBUTTONUP:
             x,y = pygame.mouse.get_pos()
             select_square(x,y, vars.board, WIDTH)
