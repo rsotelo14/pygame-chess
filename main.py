@@ -4,12 +4,12 @@ import pygame
 from entities.board_square import *
 
 from functions.functions import *
+from functions.menus import *
 from vars import *
 import vars
 
 pygame.init()
 
-#TODO: MAKE FINAL MESSAGE AND RETURN TO MAIN MENU
 
 make_board()
 initial_position()
@@ -21,9 +21,13 @@ running = True
 while running:
     option = main_menu()
 
-    if option == 1:
-        pvp()
-    elif option == 2:
+    if option == vars.PVP:
+        result =pvp()
+    elif option == vars.PVCPU:
         #pvpc()
-        pvp()
+        result = pvp()
+    elif option == vars.ESCAPE:
+        break
+    if result != vars.ESCAPE:
+        result_menu(result)
 

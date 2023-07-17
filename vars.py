@@ -1,6 +1,6 @@
 import os
 import pygame
-
+from entities.piece import Piece
 
 SCREEN_WIDTH = 800
 #Loading images
@@ -29,10 +29,18 @@ number_to_position_map = {}
 for i in range(64):
     number_to_position_map[i] = (i//8, i % 8) #(y, x) for list indexing
 
-#Main vars
 FPS = 60
 clock = pygame.time.Clock()
 
+ESCAPE = 0
+PVP = 1
+PVCPU = 2
+DRAW_STALEMATE = 3
+DRAW_50_MOVE = 4
+DRAW_REPETITION = 5
+WHITE_WINS = 6
+BLACK_WINS = 7 
+CHECKMATE = 8
 
 #State vars
 playing = False
@@ -43,11 +51,45 @@ all_possible_moves_just_played = []
 current_move = None
 board = []
 white_moves = True
+last_move = None
+check = False
+halfmove_counter = 0
+fullmove_counter = 0
+positions_strings = []
+result = None
+#Castling
+
 white_king_moved = False 
 white_left_rook_moved = False 
 white_right_rook_moved = False 
 black_king_moved = False 
 black_left_rook_moved = False 
 black_right_rook_moved = False 
-last_move = None
-check = False
+
+fen_to_piece_map = {
+    "P": Piece(True, 1),
+    "N": Piece(True, 3),
+    "B": Piece(True, 4),
+    "R": Piece(True, 5),
+    "Q": Piece(True, 9),
+    "K": Piece(True, 10),
+    "p": Piece(False, 1),
+    "n": Piece(False, 3),
+    "b": Piece(False, 4),
+    "r": Piece(False, 5),
+    "q": Piece(False, 9),
+    "k": Piece(False, 10),
+}
+
+fen_for_initial_position = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+
+letter_to_number_map = {
+    "a" : 0,
+    "b" : 1,
+    "c" : 2,
+    "d" : 3,
+    "e" : 4,
+    "f" : 5,
+    "g" : 6,
+    "h" : 7,
+}

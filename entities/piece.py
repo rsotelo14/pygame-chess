@@ -1,4 +1,3 @@
-import vars
 class Piece:
     def __init__(self, is_white, value):
         self.is_white = is_white
@@ -12,6 +11,7 @@ class Piece:
         # 4 -> Bishop
         # 3 -> Knight
         # 1 -> Pawn
+        import vars
         if self.value == 10 and self.is_white:
             self.img = vars.WHITE_KING
         elif self.value == 10 and not self.is_white:
@@ -36,3 +36,6 @@ class Piece:
             self.img = vars.WHITE_PAWN
         elif self.value == 1 and not self.is_white:
             self.img = vars.BLACK_PAWN
+
+    def __eq__(self, obj):
+        return isinstance(obj, Piece) and obj.value == self.value and obj.is_white == self.is_white
