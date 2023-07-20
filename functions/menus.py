@@ -83,6 +83,10 @@ def result_menu(result):
 
 def pvp():
     initial_position()
+    #for i in range(5):
+    #    vars.white_moves = True
+    #    num_positions = move_generation_test(i)
+    #    print(f"DEPTH = {i}, RESULT = {num_positions}")
     vars.playing = True
     WIN = vars.WIN
     board = vars.board
@@ -96,6 +100,50 @@ def pvp():
             highlight_checked_square(WIN)
         render_pieces(board, WIN)
 
+        for event in pygame.event.get():
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    vars.playing = False
+                    return vars.ESCAPE
+            if event.type == pygame.MOUSEBUTTONUP:
+                x,y = pygame.mouse.get_pos()
+                select_square(x,y, vars.board, WIDTH)
+        if vars.piece_possible_moves != []:
+            highlight_possible_squares(vars.board, WIN)
+        if not(vars.selected_piece is None): 
+            x,y = pygame.mouse.get_pos()
+            render_selected_piece(x,y, WIN)
+                
+        pygame.display.update()
+    if not vars.check:
+        if vars.result == vars.DRAW_REPETITION:
+            return vars.DRAW_REPETITION
+        elif vars.result == vars.DRAW_STALEMATE:
+            return vars.DRAW_STALEMATE
+        else:
+            return vars.DRAW_50_MOVE
+    if vars.check and not vars.white_moves:
+        return vars.WHITE_WINS
+    if vars.check and vars.white_moves:
+        return vars.BLACK_WINS
+
+def pvpc():
+    initial_position()
+    vars.playing = True
+    WIN = vars.WIN
+    board = vars.board
+    WIDTH = vars.WIDTH
+    while vars.playing:
+        vars.clock.tick(vars.FPS)
+        WIN.blit(vars.BG, (0,0))
+
+        if not vars.white_moves:
+            computer_make_move()
+        if not(vars.last_move is None): 
+            highlight_last_move(WIN)
+        if vars.check:
+            highlight_checked_square(WIN)
+        render_pieces(board, WIN)
         for event in pygame.event.get():
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:

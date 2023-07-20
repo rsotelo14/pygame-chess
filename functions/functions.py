@@ -8,17 +8,20 @@ from entities.piece import Piece
 from entities.castle import Castle
 from entities.en_passant import EnPassant
 from functions.render import *
+from functions.computer import *
 
 import vars
 
 def init_variables():
     vars.selected_piece = None
+    vars.selected_square = None
     vars.piece_possible_moves = []
     vars.all_possible_moves_to_play = []
     vars.all_possible_moves_just_played = []
     vars.current_move = None
     vars.white_moves = True
     vars.last_move = None
+    vars.moves_played = []
     vars.check = False
     vars.halfmove_counter = 0
     vars.fullmove_counter = 0
@@ -136,27 +139,32 @@ def select_square(x,y, board, width):
     #Selecting a piece
     if selected_square.piece != None and vars.selected_piece == None and selected_square.piece.is_white == vars.white_moves:
         vars.selected_piece = board[y_index][x_index].piece
+        vars.selected_square = board[y_index][x_index]
         vars.piece_possible_moves = remove_ilegal_moves(calculate_piece_moves(selected_square.number, distances, vars.selected_piece))
         board[y_index][x_index].piece = None
     #Dropping a piece
     elif vars.selected_piece != None:
-        for move in vars.piece_possible_moves:
-            if selected_square.number == move.target_square_num:
-                check_move_for_castling_change(move)
-                target_square_piece = make_move(move)
-                vars.selected_piece = None
-                check_move_for_promotion(move)
-                vars.piece_possible_moves = []
-                if move.start_square_num != move.target_square_num:
-
-                    move_made(move)
+        if selected_square == vars.selected_square:
+            vars.selected_square.piece = vars.selected_piece
+            vars.selected_piece = None
+            vars.selected_square = None
+            vars.piece_possible_moves = []
+        else:
+            for move in vars.piece_possible_moves:
+                if selected_square.number == move.target_square_num:
+                    target_square_piece = make_move(move)
+                    vars.selected_piece = None
+                    vars.selected_square = None
+                    vars.piece_possible_moves = []
+                    vars.all_possible_moves_to_play = remove_ilegal_moves(calculate_all_moves_to_play())
+                    vars.all_possible_moves_just_played = remove_ilegal_moves(calculate_all_moves_just_played())
                     look_for_checks()
                     check_for_checkmate_or_stalemate()
                     check_for_50_move_rule(target_square_piece)
                     fen_string = generate_fen_string_for_position()
                     check_for_threefold_repetition(fen_string)
-                    
-                return
+                        
+                    return
 
 def check_for_threefold_repetition(fen_string):
     split = fen_string.split(" ")
@@ -276,28 +284,30 @@ def remove_ilegal_moves(moves):
        if move.start_square_num == move.target_square_num:
            continue
        #Get the squares
-       
+       if move.target_square_num >63:
+        print(f"{move.piece.value}, {move.piece.is_white}, {move.start_square_num}, {move.target_square_num}")
        y_start, x_start = vars.number_to_position_map[move.start_square_num]
        y_target, x_target = vars.number_to_position_map[move.target_square_num]
        #Save the piece in target square
        target_square_piece = make_move(move)
-       vars.white_moves = not vars.white_moves
        #Calculate moves
        all_moves = calculate_all_moves_to_play()
        for new_move in all_moves:
            #If it's one of my pieces I dont care, and If it's in the same square I don't care
            if new_move.piece.is_white != move.piece.is_white and new_move.start_square_num != new_move.target_square_num:
                 #Get target square
-                y, x = vars.number_to_position_map[new_move.target_square_num]
-                if not move.piece.is_white:
-                    if vars.board[y][x].piece == Piece(False,10):
-                        remove_moves.append(move)
-                else:
-                    if vars.board[y][x].piece == Piece(True,10):
-                        remove_moves.append(move)
+                try:
+                    y, x = vars.number_to_position_map[new_move.target_square_num]
+                    if not move.piece.is_white:
+                        if vars.board[y][x].piece == Piece(False,10):
+                            remove_moves.append(move)
+                    else:
+                        if vars.board[y][x].piece == Piece(True,10):
+                            remove_moves.append(move)
+                except:
+                    pass
        #Unmake move
        unmake_move(move, target_square_piece)
-       vars.white_moves = not vars.white_moves
     for move_to_remove in remove_moves:
         try:
             moves.remove(move_to_remove)
@@ -306,6 +316,12 @@ def remove_ilegal_moves(moves):
     return moves
 
 def make_move(move):
+     check_move_for_castling_change(move)
+     vars.white_moves = not vars.white_moves
+     vars.last_move = move
+     vars.moves_played.append(move)
+     #if not move.piece.is_white:
+     #   vars.fullmove_counter += 1
      if type(move) == Castle:
         castle(move)
      if type(move) == EnPassant:
@@ -315,9 +331,15 @@ def make_move(move):
      target_square_piece = vars.board[y_target][x_target].piece
      vars.board[y_start][x_start].piece = None
      vars.board[y_target][x_target].piece = move.piece
+     check_move_for_promotion(move)
      return target_square_piece
 
 def unmake_move(move, target_square_piece):
+     vars.white_moves = not vars.white_moves
+     vars.moves_played.remove(move)
+     
+     vars.last_move = vars.moves_played[-1] if vars.moves_played != [] else None
+     #TODO: CHANGE FULLMOVE COUNTER AND STUFF
      if type(move) == Castle:
         un_castle(move)
      if type(move) == EnPassant:
@@ -326,15 +348,7 @@ def unmake_move(move, target_square_piece):
      y_target, x_target = vars.number_to_position_map[move.target_square_num]  
      vars.board[y_start][x_start].piece = move.piece
      vars.board[y_target][x_target].piece = target_square_piece
-
-def move_made(move):
-    vars.white_moves = not vars.white_moves
-    vars.last_move = move
-    if not move.piece.is_white:
-        vars.fullmove_counter += 1
-    vars.all_possible_moves_to_play = remove_ilegal_moves(calculate_all_moves_to_play())
-    vars.all_possible_moves_just_played = remove_ilegal_moves(calculate_all_moves_just_played())
-
+    
 def un_castle(move):
     if move.piece.is_white:
         if move.is_short_castle:
@@ -355,7 +369,6 @@ def un_castle(move):
             vars.board[0][0].piece = rook
             vars.board[0][3].piece = None
 def un_en_passant(move):
-    print("UNDO EN PASSANT;")
     if move.piece.is_white:
         y_target, x_target = vars.number_to_position_map[move.target_square_num +8]
         vars.board[y_target][x_target].piece = Piece(False, 1)
@@ -391,8 +404,6 @@ def calculate_all_moves_just_played():
                 moves = moves + calculate_piece_moves(square.number, distances, square.piece)
     return moves
 def calculate_piece_moves(number, distances, piece):
-
-
     if piece.value == 5:
         moves = calculate_rook_moves(number, distances, piece)
     elif piece.value == 4:
@@ -512,8 +523,8 @@ def calculate_rook_moves(number, distances, piece):
         if not keep_going:
             break
 
-    move = Move(number, number, piece)
-    moves.append(move)
+   # move = Move(number, number, piece)
+   # moves.append(move)
     return moves
 
 def calculate_bishop_moves(number, distances, piece):
@@ -554,8 +565,8 @@ def calculate_bishop_moves(number, distances, piece):
         if not keep_going:
             break
 
-    move = Move(number, number, piece)
-    moves.append(move)
+  #  move = Move(number, number, piece)
+  #  moves.append(move)
     return moves
 def calculate_knight_moves(number, distances, piece):
     moves = []
@@ -608,8 +619,8 @@ def calculate_knight_moves(number, distances, piece):
         if possible:
             moves.append(move)
 
-    move = Move(number, number, piece)
-    moves.append(move)
+  #  move = Move(number, number, piece)
+  #  moves.append(move)
 
     return moves
 
@@ -672,13 +683,13 @@ def calculate_pawn_moves(number,distances, piece):
                 moves.append(move)
         #En passant
         last_move= vars.last_move
-        if y == 4 and last_move.piece.is_white and last_move.piece.value == 1 and last_move.start_square_num == last_move.target_square_num +16:
+        if last_move!= None and y == 4 and last_move.piece.is_white and last_move.piece.value == 1 and last_move.start_square_num == last_move.target_square_num +16:
             y_last_move, x_last_move = vars.number_to_position_map[vars.last_move.target_square_num]
             if x_last_move == x +1 or x_last_move == x -1:
                 moves.append(EnPassant(number, last_move.target_square_num + 8, piece ))
         
-    move = Move(number, number, piece)
-    moves.append(move)
+  #  move = Move(number, number, piece)
+  #  moves.append(move)
     return moves
 
 
@@ -797,6 +808,21 @@ def generate_fen_string_for_position():
     vars.positions_strings.append(remove_characters_until_two_spaces(fen_string))
     print(fen_string)
     return fen_string
+
+def move_generation_test(depth):
+    if depth == 0:
+        return 1
+    moves = remove_ilegal_moves(calculate_all_moves_to_play())
+    num_positions = 0
+    #print(f"DEPTH: {depth}, NUM_POSITIONS = {num_positions}")
+    for move in moves:
+
+       # print(f"MOVE: is_white = {move.piece.is_white}, start_square_num= {move.start_square_num}, target_square_num = {move.target_square_num}")
+        target_square_piece = make_move(move)
+        num_positions += move_generation_test(depth -1)
+        unmake_move(move, target_square_piece)
+
+    return num_positions
 
 def get_keys_from_value(d, val):
     return [k for k, v in d.items() if v == val]

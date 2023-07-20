@@ -19,15 +19,13 @@ def highlight_checked_square(window):
                 window.blit(vars.HIGHLIGHT_CHECKED_SQUARE, (square.x_start,square.y_start))
 
 def highlight_possible_squares(board, window):
+    window.blit(vars.HIGHLIGHT_SQUARE, (vars.selected_square.x_start, vars.selected_square.y_start)) 
     for move in vars.piece_possible_moves:
         target_square_num = move.target_square_num
         y,x = vars.number_to_position_map[target_square_num]
         square = vars.board[y][x]            
-        if move.start_square_num != move.target_square_num:
-            window.blit(vars.HIGHLIGHT_DOT, (square.x_start, square.y_start))
-        else:
-            window.blit(vars.HIGHLIGHT_SQUARE, (square.x_start, square.y_start)) 
-
+        window.blit(vars.HIGHLIGHT_DOT, (square.x_start, square.y_start))
+        
 def render_selected_piece(x_start, y_start , window):
     x = x_start - vars.selected_piece.img.get_width()/2
     y = y_start - vars.selected_piece.img.get_height()/2

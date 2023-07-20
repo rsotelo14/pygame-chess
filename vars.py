@@ -45,6 +45,7 @@ CHECKMATE = 8
 #State vars
 playing = False
 selected_piece = None
+selected_square = None
 piece_possible_moves = []
 all_possible_moves_to_play = []
 all_possible_moves_just_played = []
@@ -52,6 +53,7 @@ current_move = None
 board = []
 white_moves = True
 last_move = None
+moves_played = []
 check = False
 halfmove_counter = 0
 fullmove_counter = 0

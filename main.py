@@ -24,8 +24,8 @@ while running:
     if option == vars.PVP:
         result =pvp()
     elif option == vars.PVCPU:
-        #pvpc()
-        result = pvp()
+        result = pvpc()
+        
     elif option == vars.ESCAPE:
         break
     if result != vars.ESCAPE:
