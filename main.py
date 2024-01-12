@@ -12,7 +12,6 @@ pygame.init()
 
 
 make_board()
-initial_position()
 
 #Main vars
 running = True

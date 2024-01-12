@@ -152,7 +152,7 @@ def select_square(x,y, board, width):
         else:
             for move in vars.piece_possible_moves:
                 if selected_square.number == move.target_square_num:
-                    target_square_piece = make_move(move)
+                    target_square_piece = make_move(move, True)
                     vars.selected_piece = None
                     vars.selected_square = None
                     vars.piece_possible_moves = []
@@ -244,7 +244,9 @@ def en_passant(move):
         y, x = vars.number_to_position_map[move.target_square_num -8]
         vars.board[y][x].piece = None
 
-def check_move_for_castling_change(move):
+def check_move_for_castling_change(move, is_real):
+    if not is_real:
+        return 
     piece = move.piece
     if move.start_square_num == move.target_square_num:
         return
@@ -278,18 +280,18 @@ def check_move_for_castling_change(move):
 def remove_ilegal_moves(moves):
     temp_board = vars.board
     remove_moves=  []
+    black_king_moved_aux = vars.black_king_moved
+    white_king_moved_aux = vars.white_king_moved
     #For each of the possible moves
     for move in moves:
        #If its to the same square it doesnt matter
        if move.start_square_num == move.target_square_num:
            continue
        #Get the squares
-       if move.target_square_num >63:
-        print(f"{move.piece.value}, {move.piece.is_white}, {move.start_square_num}, {move.target_square_num}")
        y_start, x_start = vars.number_to_position_map[move.start_square_num]
        y_target, x_target = vars.number_to_position_map[move.target_square_num]
        #Save the piece in target square
-       target_square_piece = make_move(move)
+       target_square_piece = make_move(move, False)
        #Calculate moves
        all_moves = calculate_all_moves_to_play()
        for new_move in all_moves:
@@ -313,10 +315,13 @@ def remove_ilegal_moves(moves):
             moves.remove(move_to_remove)
         except:
             pass
+    
+    vars.white_king_moved = white_king_moved_aux
+    vars.black_king_moved = black_king_moved_aux
     return moves
 
-def make_move(move):
-     check_move_for_castling_change(move)
+def make_move(move, is_real):
+     check_move_for_castling_change(move, is_real)
      vars.white_moves = not vars.white_moves
      vars.last_move = move
      vars.moves_played.append(move)
@@ -348,6 +353,7 @@ def unmake_move(move, target_square_piece):
      y_target, x_target = vars.number_to_position_map[move.target_square_num]  
      vars.board[y_start][x_start].piece = move.piece
      vars.board[y_target][x_target].piece = target_square_piece
+     
     
 def un_castle(move):
     if move.piece.is_white:
@@ -438,10 +444,12 @@ def check_castling(number, piece):
                     y, x = vars.number_to_position_map[number -i]
                     if vars.board[y][x].piece != None:
                         can_long_castle = False
+                        break
                     if i != 3:
                         for move in vars.all_possible_moves_to_play:
                             if move.piece != None and move.piece.is_white == (not piece.is_white) and move.target_square_num == number -i:
                                 can_long_castle = False
+                                break
                 except: 
                     pass
             if can_long_castle:
@@ -453,9 +461,11 @@ def check_castling(number, piece):
                     y, x = vars.number_to_position_map[number +i]
                     if vars.board[y][x].piece != None:
                         can_short_castle = False
+                        break
                     for move in vars.all_possible_moves_to_play:
                         if move.piece != None and move.piece.is_white == (not piece.is_white) and move.target_square_num == number +i:
                             can_short_castle = False
+                            break
                 except:
                     pass
             if can_short_castle:
@@ -737,7 +747,7 @@ def setup_fen_string(fen_string):
     vars.last_move = None
     en_passant_square = pieces[3]
     if en_passant_square != "-":
-        x = vars.letter_to_number_map(en_passant_square[0])
+        x = vars.letter_to_number_map[en_passant_square[0]]
         y = 8 - int(en_passant_square[1])
         square_num = get_keys_from_value(vars.number_to_position_map, (y,x))[0]
         if vars.white_moves:
@@ -806,7 +816,6 @@ def generate_fen_string_for_position():
     fen_string += " " + str(vars.fullmove_counter)
 
     vars.positions_strings.append(remove_characters_until_two_spaces(fen_string))
-    print(fen_string)
     return fen_string
 
 def move_generation_test(depth):

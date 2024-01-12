@@ -62,9 +62,11 @@ result = None
 #Castling
 
 white_king_moved = False 
+white_king_moved_aux = False
 white_left_rook_moved = False 
 white_right_rook_moved = False 
 black_king_moved = False 
+##black_king_moved_aux = False
 black_left_rook_moved = False 
 black_right_rook_moved = False 
 

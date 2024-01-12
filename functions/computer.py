@@ -5,8 +5,7 @@ import functions.functions as f
 
 def computer_make_move():
     move = random.choice(vars.all_possible_moves_to_play)
-    f.check_move_for_castling_change(move)
-    target_square_piece = f.make_move(move)
+    target_square_piece = f.make_move(move, True)
     vars.selected_piece = None
     vars.selected_square = None
     vars.piece_possible_moves = []
